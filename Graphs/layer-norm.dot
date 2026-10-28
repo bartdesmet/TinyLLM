@@ -1,0 +1,32 @@
+digraph LayerNorm {
+  graph [rankdir=LR, label="LayerNorm: normalize features of ONE token (not across tokens)\nBlue=input | gray=operation | orange hexagon=learned | green=output | yellow=constant", labelloc=t];
+  node [fontname="Arial", style=filled, color="#555555", penwidth=1.4];
+  edge [fontname="Arial", color="#666666"];
+  x [label="Input x [D]", shape=ellipse, fillcolor="#DCEBFA", color="#4A78A8"];
+  mean [label="mean = sum_i x[i] / D\nscalar", shape=box, fillcolor="#E8E8E8"];
+  center [label="Center: c = x - mean\n[D]", shape=box, fillcolor="#E8E8E8"];
+  square [label="Elementwise square\nc * c [D]", shape=box, fillcolor="#E8E8E8"];
+  variance [label="variance = sum_i c[i]^2 / D\nscalar (divide by D, not D-1)", shape=box, fillcolor="#E8E8E8"];
+  eps [label="Constant epsilon", shape=diamond, fillcolor="#FFF2CC", color="#B59B3B"];
+  inverse [label="invStd = (variance + epsilon)^(-0.5)\nscalar", shape=box, fillcolor="#E8E8E8"];
+  normalize [label="Normalize: z = c * invStd\n[D]", shape=box, fillcolor="#E8E8E8"];
+  gamma [label="Learned gamma [D]\ninitially all 1", shape=hexagon, fillcolor="#FCE4C1", color="#C47A16"];
+  beta [label="Learned beta [D]\ninitially all 0", shape=hexagon, fillcolor="#FCE4C1", color="#C47A16"];
+  scale [label="Elementwise scale\ngamma * z [D]", shape=box, fillcolor="#E8E8E8"];
+  add [label="Add beta\ny = gamma * z + beta [D]", shape=box, fillcolor="#E8E8E8"];
+  y [label="Output y [D]", shape=ellipse, fillcolor="#DDF2DF", color="#438A4B"];
+  x -> mean;
+  x -> center;
+  mean -> center;
+  center -> square;
+  square -> variance;
+  variance -> inverse;
+  eps -> inverse;
+  center -> normalize;
+  inverse -> normalize;
+  normalize -> scale;
+  gamma -> scale;
+  scale -> add;
+  beta -> add;
+  add -> y;
+}

@@ -1,0 +1,72 @@
+digraph MatrixMultiply {
+  graph [rankdir=TB, label="Matrix multiply: x [1x2] * W [2x3] = y [1x3]\ny[j] = dot(x, column j of W)\nBlue=input | orange=learned | gray=operation | green=output", labelloc=t, nodesep=0.5, ranksep=0.8];
+  node [fontname="Arial"];
+  edge [fontname="Arial", color="#666666"];
+
+  x [shape=plain, label=<
+	<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="4">
+	  <TR><TD><B>Input row x [1x2]</B></TD></TR>
+	  <TR><TD>
+		<TABLE BORDER="2" COLOR="#4A78A8" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" BGCOLOR="#DCEBFA">
+		  <TR><TD>x0</TD><TD>x1</TD></TR>
+		</TABLE>
+	  </TD></TR>
+	</TABLE>>];
+
+  W [shape=plain, label=<
+	<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="6">
+	  <TR><TD COLSPAN="3"><B>Learned matrix W [2x3]</B></TD></TR>
+	  <TR>
+		<TD PORT="c0">
+		  <TABLE BORDER="2" COLOR="#C47A16" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" BGCOLOR="#FCE4C1">
+			<TR><TD>W[0,0]</TD></TR>
+			<TR><TD>W[1,0]</TD></TR>
+		  </TABLE>
+		</TD>
+		<TD PORT="c1">
+		  <TABLE BORDER="2" COLOR="#C47A16" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" BGCOLOR="#FCE4C1">
+			<TR><TD>W[0,1]</TD></TR>
+			<TR><TD>W[1,1]</TD></TR>
+		  </TABLE>
+		</TD>
+		<TD PORT="c2">
+		  <TABLE BORDER="2" COLOR="#C47A16" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" BGCOLOR="#FCE4C1">
+			<TR><TD>W[0,2]</TD></TR>
+			<TR><TD>W[1,2]</TD></TR>
+		  </TABLE>
+		</TD>
+	  </TR>
+	</TABLE>>];
+
+  { rank=same; x; W; }
+
+  {
+    rank=same;
+    node [shape=circle, style=filled, fillcolor="#E8E8E8", color="#555555", penwidth=1.4, width=0.6, fixedsize=true];
+    d0 [label="dot"];
+    d1 [label="dot"];
+    d2 [label="dot"];
+  }
+
+  y [shape=plain, label=<
+	<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="4">
+	  <TR><TD>
+		<TABLE BORDER="2" COLOR="#438A4B" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" BGCOLOR="#DDF2DF">
+		  <TR><TD PORT="y0">y0</TD><TD PORT="y1">y1</TD><TD PORT="y2">y2</TD></TR>
+		</TABLE>
+	  </TD></TR>
+	  <TR><TD><B>Output row (1x3)</B></TD></TR>
+	</TABLE>>];
+
+  x -> d0 [color="#4A78A8"];
+  x -> d1 [color="#4A78A8"];
+  x -> d2 [color="#4A78A8"];
+
+  W:c0:s -> d0 [color="#C47A16"];
+  W:c1:s -> d1 [color="#C47A16"];
+  W:c2:s -> d2 [color="#C47A16"];
+
+  d0 -> y:y0:n;
+  d1 -> y:y1:n;
+  d2 -> y:y2:n;
+}

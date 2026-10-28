@@ -1,0 +1,51 @@
+digraph GptModel {
+  graph [rankdir=TB, label="TinyLLM: conceptual forward + training loss (not the scalar DAG)\nBlue=input | gray=operation | orange hexagon=learned | green=output | yellow=constant", labelloc=t];
+  node [fontname="Arial", style=filled, color="#555555", penwidth=1.4];
+  edge [fontname="Arial", color="#666666"];
+  ids [label="Input token IDs [T]\n0 < T <= blockSize", shape=ellipse, fillcolor="#DCEBFA", color="#4A78A8"];
+  targets [label="Input next-token targets\nIDs [T]", shape=ellipse, fillcolor="#DCEBFA", color="#4A78A8"];
+  positions [label="Position indices 0..T-1\nfixed", shape=diamond, fillcolor="#FFF2CC", color="#B59B3B"];
+  tokTable [label="Learned token embedding table [V,D]", shape=hexagon, fillcolor="#FCE4C1", color="#C47A16"];
+  posTable [label="Learned position embedding table [blockSize,D]", shape=hexagon, fillcolor="#FCE4C1", color="#C47A16"];
+  tok [label="Token embedding lookup\n[T,D]", shape=box, fillcolor="#E8E8E8"];
+  pos [label="Position embedding lookup\n[T,D]", shape=box, fillcolor="#E8E8E8"];
+  add [label="Add embeddings\nX = token + position [T,D]", shape=box, fillcolor="#E8E8E8"];
+  blocks [label="N transformer blocks, in sequence\nEach: pre-LN attention + residual,\nthen pre-LN feed-forward + residual\n[T,D] -> [T,D]\nEach block has separate learned weights", shape=box, fillcolor="#E8E8E8"];
+  ln [label="Final LayerNorm per token\n[T,D]", shape=box, fillcolor="#E8E8E8"];
+  lmWeights [label="Learned LM-head W [D,V]\nNo bias; not tied to token embedding", shape=hexagon, fillcolor="#FCE4C1", color="#C47A16"];
+  logits [label="Logits = normalized X * W\n[T,V] (not probabilities)", shape=box, fillcolor="#E8E8E8"];
+  subgraph cluster_loss {
+	label="Training: stable cross-entropy, repeated at every timestep t";
+	color="#BBBBBB";
+	row [label="Logits row z = logits[t,:]\n[V]", shape=ellipse, fillcolor="white"];
+	max [label="m = max(z.Data)\ndata-only constant shift", shape=diamond, style="filled,dashed", fillcolor="#FFF2CC", color="#B59B3B"];
+	exp [label="exp(z[v] - m) for all v", shape=box, fillcolor="#E8E8E8"];
+	sum [label="S = sum_v exp(z[v] - m)", shape=box, fillcolor="#E8E8E8"];
+	lse [label="logSumExp = log(S) + m", shape=box, fillcolor="#E8E8E8"];
+	selected [label="Select z[target[t]]", shape=box, fillcolor="#E8E8E8"];
+	nll [label="nll[t] = logSumExp - z[target[t]]", shape=box, fillcolor="#E8E8E8"];
+	loss [label="Training loss\nLoss = sum_t nll[t] / T", shape=ellipse, fillcolor="#DDF2DF", color="#438A4B"];
+	row -> max [style=dashed, label="data only"];
+	row -> exp;
+	max -> exp [style=dashed];
+	exp -> sum;
+	sum -> lse;
+	max -> lse [style=dashed];
+	row -> selected;
+	targets -> selected;
+	lse -> nll;
+	selected -> nll;
+	nll -> loss [label="all T positions"];
+  }
+  ids -> tok;
+  tokTable -> tok;
+  positions -> pos;
+  posTable -> pos;
+  tok -> add;
+  pos -> add;
+  add -> blocks;
+  blocks -> ln;
+  ln -> logits;
+  lmWeights -> logits;
+  logits -> row;
+}

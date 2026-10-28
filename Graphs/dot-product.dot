@@ -1,0 +1,39 @@
+digraph DotProduct {
+  graph [rankdir=LR, label="Dot product: x · y = x0*y0 + x1*y1 + x2*y2\nBlue=input | gray=operation | green=output", labelloc=t];
+  node [fontname="Arial", style=filled, color="#555555", penwidth=1.4];
+  edge [fontname="Arial", color="#666666"];
+
+  subgraph cluster_x {
+	label="Vector x";
+	color="#8AB6E6";
+	style=rounded;
+	x0 [label="x0", shape=ellipse, fillcolor="#DCEBFA"];
+	x1 [label="x1", shape=ellipse, fillcolor="#DCEBFA"];
+	x2 [label="x2", shape=ellipse, fillcolor="#DCEBFA"];
+  }
+  subgraph cluster_y {
+	label="Vector y";
+	color="#8AB6E6";
+	style=rounded;
+	y0 [label="y0", shape=ellipse, fillcolor="#DCEBFA"];
+	y1 [label="y1", shape=ellipse, fillcolor="#DCEBFA"];
+	y2 [label="y2", shape=ellipse, fillcolor="#DCEBFA"];
+  }
+
+  mul0 [label="*", shape=circle, width=0.4, fixedsize=true, fillcolor="#E8E8E8", xlabel="x0*y0"];
+  mul1 [label="*", shape=circle, width=0.4, fixedsize=true, fillcolor="#E8E8E8", xlabel="x1*y1"];
+  mul2 [label="*", shape=circle, width=0.4, fixedsize=true, fillcolor="#E8E8E8", xlabel="x2*y2"];
+  sum [label="+", shape=circle, width=0.5, fixedsize=true, fillcolor="#E8E8E8"];
+  result [label="x · y", shape=ellipse, fillcolor="#DDF2DF", color="#438A4B"];
+
+  x0 -> mul0;
+  y0 -> mul0;
+  x1 -> mul1;
+  y1 -> mul1;
+  x2 -> mul2;
+  y2 -> mul2;
+  mul0 -> sum [label="p0"];
+  mul1 -> sum [label="p1"];
+  mul2 -> sum [label="p2"];
+  sum -> result;
+}

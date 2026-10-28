@@ -1,0 +1,26 @@
+digraph FeedForward {
+  graph [rankdir=LR, label="FeedForward: applied independently at each token; weights shared across positions\nBlue=input | gray=operation | orange hexagon=learned | green=output", labelloc=t];
+  node [fontname="Arial", style=filled, color="#555555", penwidth=1.4];
+  edge [fontname="Arial", color="#666666"];
+  x [label="Input x [D]", shape=ellipse, fillcolor="#DCEBFA", color="#4A78A8"];
+  w1 [label="Learned W1 [D,4D]", shape=hexagon, fillcolor="#FCE4C1", color="#C47A16"];
+  fc1 [label="Fc1 matrix multiply\nz = x * W1 [4D]", shape=box, fillcolor="#E8E8E8"];
+  b1 [label="Learned b1 [4D]", shape=hexagon, fillcolor="#FCE4C1", color="#C47A16"];
+  add1 [label="Add bias\nh = z + b1 [4D]", shape=box, fillcolor="#E8E8E8"];
+  gelu [label="Elementwise GELU\na = GELU(h) [4D]\nGaussian Error Linear Unit\n(tanh approximation)", shape=box, fillcolor="#E8E8E8"];
+  w2 [label="Learned W2 [4D,D]", shape=hexagon, fillcolor="#FCE4C1", color="#C47A16"];
+  fc2 [label="Fc2 matrix multiply\nr = a * W2 [D]", shape=box, fillcolor="#E8E8E8"];
+  b2 [label="Learned b2 [D]", shape=hexagon, fillcolor="#FCE4C1", color="#C47A16"];
+  add2 [label="Add bias\ny = r + b2 [D]", shape=box, fillcolor="#E8E8E8"];
+  y [label="Output y [D]", shape=ellipse, fillcolor="#DDF2DF", color="#438A4B"];
+  x -> fc1;
+  w1 -> fc1;
+  fc1 -> add1;
+  b1 -> add1;
+  add1 -> gelu;
+  gelu -> fc2;
+  w2 -> fc2;
+  fc2 -> add2;
+  b2 -> add2;
+  add2 -> y;
+}

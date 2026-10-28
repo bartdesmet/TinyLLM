@@ -1,0 +1,18 @@
+digraph Linear {
+  graph [rankdir=LR, label="Linear: row-vector convention\nBlue=input | gray=operation | orange hexagon=learned | green=output", labelloc=t];
+  node [fontname="Arial", style=filled, color="#555555", penwidth=1.4];
+  edge [fontname="Arial", color="#666666"];
+  x [label="Input x [2]", shape=ellipse, fillcolor="#DCEBFA", color="#4A78A8"];
+  w [label="Learned W [2,3]", shape=hexagon, fillcolor="#FCE4C1", color="#C47A16"];
+  b [label="Learned b [3]\n(optional)", shape=hexagon, fillcolor="#FCE4C1", color="#C47A16"];
+  multiply [label="Matrix multiply\nz = x * W [3]\nz[j] = sum_i x[i] * W[i,j]", shape=box, fillcolor="#E8E8E8"];
+  z [label="Intermediate z [3]", shape=ellipse, fillcolor="white"];
+  add [label="Add bias\ny = z + b [3]\nWithout bias: y = z", shape=box, fillcolor="#E8E8E8"];
+  y [label="Output y [3]", shape=ellipse, fillcolor="#DDF2DF", color="#438A4B"];
+  x -> multiply;
+  w -> multiply;
+  multiply -> z;
+  z -> add;
+  b -> add;
+  add -> y;
+}

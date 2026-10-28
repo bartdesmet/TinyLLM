@@ -1,0 +1,22 @@
+digraph TransformerBlock {
+  graph [rankdir=TB, label="Pre-LayerNorm transformer block: all sequence activations [T,D]\nBlue=input | gray=operation | orange=learned parameters (inside sublayers) | green=output", labelloc=t];
+  node [fontname="Arial", style=filled, color="#555555", penwidth=1.4];
+  edge [fontname="Arial", color="#666666"];
+  x [label="Input X [T,D]", shape=ellipse, fillcolor="#DCEBFA", color="#4A78A8"];
+  ln1 [label="LayerNorm 1\nnormalize each token independently", shape=box, fillcolor="#E8E8E8"];
+  attention [label="Causal multi-head attention\nmixes information from positions s <= t", shape=box, fillcolor="#E8E8E8"];
+  add1 [label="+", shape=circle, width=0.55, fixedsize=true, fillcolor="#E8E8E8", xlabel="A = X + Attention(LN1(X))"];
+  ln2 [label="LayerNorm 2\nnormalize each token independently", shape=box, fillcolor="#E8E8E8"];
+  ffn [label="FeedForward\nLinear D->4D, GELU, Linear 4D->D", shape=box, fillcolor="#E8E8E8"];
+  add2 [label="+", shape=circle, width=0.55, fixedsize=true, fillcolor="#E8E8E8", xlabel="Y = A + FeedForward(LN2(A))"];
+  y [label="Output Y [T,D]", shape=ellipse, fillcolor="#DDF2DF", color="#438A4B"];
+  x -> ln1;
+  ln1 -> attention;
+  attention -> add1;
+  x -> add1 [label="residual / skip", style=dashed];
+  add1 -> ln2;
+  ln2 -> ffn;
+  ffn -> add2;
+  add1 -> add2 [label="residual / skip", style=dashed];
+  add2 -> y;
+}

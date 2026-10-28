@@ -1,0 +1,52 @@
+digraph Attention {
+  graph [rankdir=LR, label="Causal multi-head attention: D = H*d, T tokens; projections have NO bias\nBlue=input | gray=operation | orange hexagon=learned | green=output | yellow=constant", labelloc=t];
+  node [fontname="Arial", style=filled, color="#555555", penwidth=1.4];
+  edge [fontname="Arial", color="#666666"];
+  x [label="Input X [T,D]", shape=ellipse, fillcolor="#DCEBFA", color="#4A78A8"];
+  wq [label="Learned Wq [D,D]", shape=hexagon, fillcolor="#FCE4C1", color="#C47A16"];
+  wk [label="Learned Wk [D,D]", shape=hexagon, fillcolor="#FCE4C1", color="#C47A16"];
+  wv [label="Learned Wv [D,D]", shape=hexagon, fillcolor="#FCE4C1", color="#C47A16"];
+  q [label="Q = X * Wq\n[T,D]", shape=ellipse, fillcolor="white"];
+  k [label="K = X * Wk\n[T,D]", shape=ellipse, fillcolor="white"];
+  v [label="V = X * Wv\n[T,D]", shape=ellipse, fillcolor="white"];
+  subgraph cluster_head {
+	label="Repeat for each head h and query position t";
+	color="#BBBBBB";
+	qh [label="q_h[t] [d]\nhead slice of Q[t]", shape=ellipse, fillcolor="white"];
+	kh [label="k_h[s] [d]\nONLY s = 0..t", shape=ellipse, fillcolor="white"];
+	vh [label="v_h[s] [d]\nONLY s = 0..t", shape=ellipse, fillcolor="white"];
+	score [label="score[s] = dot(q_h[t], k_h[s]) / sqrt(d)\n[t+1] (future positions never computed)", shape=box, fillcolor="#E8E8E8"];
+	maximum [label="m = max(score.Data)\ndata-only constant shift", shape=diamond, style="filled,dashed", fillcolor="#FFF2CC", color="#B59B3B"];
+	exp [label="e[s] = exp(score[s] - m)", shape=box, fillcolor="#E8E8E8"];
+	denom [label="denom = sum_s e[s]", shape=box, fillcolor="#E8E8E8"];
+	weights [label="a[s] = e[s] * denom^(-1)\nsoftmax weights [t+1]", shape=box, fillcolor="#E8E8E8"];
+	weighted [label="out_h[t] = sum_s a[s] * v_h[s]\n[d]", shape=box, fillcolor="#E8E8E8"];
+	qh -> score;
+	kh -> score;
+	score -> maximum [style=dashed, label="data only"];
+	score -> exp;
+	maximum -> exp [style=dashed];
+	exp -> denom;
+	exp -> weights;
+	denom -> weights;
+	weights -> weighted;
+	vh -> weighted;
+  }
+  concat [label="Concatenate H heads\n[T,D]", shape=ellipse, fillcolor="white"];
+  wo [label="Learned Wo [D,D]", shape=hexagon, fillcolor="#FCE4C1", color="#C47A16"];
+  project [label="Output matrix multiply\nconcat * Wo [T,D]", shape=box, fillcolor="#E8E8E8"];
+  output [label="Output Y [T,D]", shape=ellipse, fillcolor="#DDF2DF", color="#438A4B"];
+  x -> q;
+  x -> k;
+  x -> v;
+  wq -> q;
+  wk -> k;
+  wv -> v;
+  q -> qh;
+  k -> kh;
+  v -> vh;
+  weighted -> concat [label="all H heads"];
+  concat -> project;
+  wo -> project;
+  project -> output;
+}
