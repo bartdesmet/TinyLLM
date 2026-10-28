@@ -11,7 +11,10 @@ TinyLLM/
 ├── Autograd/
 │   └── Value.cs              # one heap node per scalar op + reverse-mode autograd
 ├── Tokenization/
-│   └── CharTokenizer.cs      # char ↔ id maps built from the training corpus
+│   ├── ITokenizer.cs         # common interface (Encode/Decode/VocabSize/DebugString)
+│   ├── CharTokenizer.cs      # char ↔ id maps built from the training corpus
+│   ├── BytePairTokenizer.cs  # byte-level BPE trained on the corpus
+│   └── TokenizerDebugFormatter.cs # readable token ID → text listing
 ├── Model/
 │   ├── Module.cs             # base class: IEnumerable<Value> Parameters()
 │   ├── Linear.cs             # y = x W + b
@@ -20,7 +23,8 @@ TinyLLM/
 │   ├── CausalSelfAttention.cs# multi-head, masked
 │   ├── FeedForward.cs        # Linear → GELU → Linear
 │   ├── TransformerBlock.cs   # pre-LN residual block
-│   └── GptModel.cs           # tok+pos embeddings + N blocks + LM head
+│   ├── GptModel.cs           # tok+pos embeddings + N blocks + LM head
+│   └── ModelCheckpoint.cs    # save/load inference checkpoints (JSON)
 ├── Training/
 │   ├── CrossEntropyLoss.cs   # stable log-sum-exp
 │   ├── IOptimizer.cs
@@ -31,7 +35,11 @@ TinyLLM/
 │   └── Sampler.cs            # temperature + optional top-k autoregressive sampler
 ├── Data/
 │   └── corpus.txt            # Shakespeare sonnets (1609, public domain)
-└── Program.cs                # end-to-end demo: train, sample mid-run, REPL
+├── Utilities/
+│   └── RandomExtensions.cs
+└── Program.cs                # end-to-end demo: train/load, sample mid-run, REPL
+
+Graphs/                       # hand-written Graphviz diagrams (see below)
 ```
 
 ## Running
@@ -78,8 +86,9 @@ When training in the default mode, you'll see:
 1. Corpus + vocabulary size reported, followed by token ID-to-text mappings.
 2. 2000 AdamW training steps by default, with the loss printed on step 1 and every 50 steps.
 3. A short sample generation at step 1000.
-4. A prompt to save the model, then a REPL prompt. Type any text built from
-   characters present in the corpus and the model will continue it.
+4. A prompt to save the model, then a REPL prompt. Type some text and the
+   model will continue it (with the character tokenizer, only characters
+   present in the corpus are accepted).
    Press Enter on an empty REPL line to exit.
 
 Both tokenizers expose `DebugString()` through `ITokenizer`. It returns one
@@ -88,7 +97,8 @@ Text is quoted, with whitespace escaped (`\n`, `\r`, `\t`, and `\u0020` for
 space), so token boundaries stay visible. BPE tokens that contain only part of
 a UTF-8 character show their exact hexadecimal bytes, e.g.
 `0 -> <partial UTF-8: C3>`. The demo prints this view before training; switch
-`UseTokenizer` in `Program.cs` to compare character-level and byte-pair vocabularies.
+`UseTokenizer` in `Program.cs` (currently `BytePair`) to compare character-level and
+byte-pair vocabularies.
 
 ## Visualizing the building blocks
 
@@ -128,8 +138,11 @@ dot -Tsvg .\Graphs\transformer-block.dot -o .\Graphs\transformer-block.svg
   for the local gradient. `Backward()` builds a topological order of all
   ancestors, seeds the root gradient to 1, and runs each closure in reverse,
   populating `.Grad` on every leaf parameter.
-- **Tokenization** — character-level: each distinct character in the corpus
-  becomes an id. Simple, no external vocab files.
+- **Tokenization** — two interchangeable tokenizers behind `ITokenizer`.
+  `CharTokenizer` gives each distinct character an id. `BytePairTokenizer`
+  (the default) starts from UTF-8 bytes and repeatedly merges the most frequent
+  adjacent pair, up to `BpeTargetVocabSize` (256) tokens, giving a larger
+  vocabulary but shorter sequences.
 - **Embeddings** — token ids and absolute positions are both looked up in
   learnable tables of shape `[vocab|blockSize, embedDim]` and summed
   element-wise.
@@ -149,11 +162,11 @@ dot -Tsvg .\Graphs\transformer-block.dot -o .\Graphs\transformer-block.svg
 
 Every scalar op (each individual multiply, add, exp, etc.) allocates a heap
 node. A single forward pass through the default tiny configuration
-(`blockSize=8`, `embedDim=16`, `numHeads=2`, `numLayers=1`, `vocab≈50`)
-allocates roughly tens of thousands of `Value` nodes. Expect each training
-step to take a noticeable fraction of a second on a typical machine, and
-expect `200` steps to be enough to start producing Shakespeare-ish character
-patterns but **not** coherent text.
+(`blockSize=16`, `embedDim=16`, `numHeads=2`, `numLayers=1`, vocabulary up to 256
+with BPE) allocates hundreds of thousands of `Value` nodes (about 280,000 in one
+measured training-loss graph). Expect each training step to take a noticeable
+fraction of a second or more on a typical machine. The default `2000` steps
+start producing Shakespeare-ish patterns but **not** coherent text.
 
 This is the deliberate tradeoff: you can put a breakpoint anywhere — inside
 softmax, inside the LayerNorm variance calculation, inside the GELU backward —
@@ -164,13 +177,17 @@ and inspect the exact `Value` graph that produced the number.
 | Constant            | Default | Meaning                                                |
 |---------------------|---------|--------------------------------------------------------|
 | `Seed`              | 1337    | RNG seed for weight init and sampling                  |
-| `BlockSize`         | 8       | Context length                                         |
+| `BlockSize`         | 16      | Context length                                         |
 | `EmbedDim`          | 16      | Token/position embedding size                          |
 | `NumHeads`          | 2       | Attention heads (must divide `EmbedDim`)               |
 | `NumLayers`         | 1       | Stacked transformer blocks                             |
-| `TrainSteps`        | 200     | Number of optimizer updates                            |
-| `LogEvery`          | 10      | Loss-print cadence                                     |
+| `TrainSteps`        | 2000    | Number of optimizer updates (`--steps` overrides)      |
+| `LogEvery`          | 50      | Loss-print cadence                                     |
+| `MidRunSampleAt`    | 1000    | Step at which a sample is generated                    |
 | `LearningRate`      | 3e-3    | AdamW learning rate                                    |
+| `WeightDecay`       | 0.0     | AdamW decoupled weight decay                           |
+| `UseTokenizer`      | BytePair| `Char` or `BytePair`                                   |
+| `BpeTargetVocabSize`| 256     | Upper bound on BPE vocabulary size                     |
 | `ReplTemperature`   | 1.0     | Higher = more random; lower = more conservative        |
 | `ReplTopK`          | 0       | 0 disables; otherwise sample from the top-K candidates |
 
@@ -178,10 +195,8 @@ and inspect the exact `Value` graph that produced the number.
 
 - **Training resumption.** Inference checkpoints save weights and model/tokenizer
   configuration, but not optimizer moments or RNG state for continuing a training run.
-- **Batching.**
-  gradients over several sequences would smooth the loss curve.
-- **Byte-pair tokenization.** Character-level is simplest; BPE is a natural
-  next step.
+- **Batching.** Averaging gradients over several sequences would smooth the
+  loss curve.
 - **Faster backend.** Replace the scalar engine with `float[]`-tensor ops
   (loop-fused or SIMD via `System.Numerics.Tensors`) once the educational
   version is well understood.
